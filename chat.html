@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TestForge — TPS Authoring Agent</title>
+<style>
+  :root {
+    --db-dark: #1b3139; --db-red: #ff3621; --db-teal: #00a972;
+    --db-teal-dark: #02675c; --bg: #f6f7f8; --panel: #ffffff;
+    --user-bubble: #e6f4ef; --agent-bubble: #f3f4f6; --muted: #5a6872;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--db-dark); height: 100vh; display: flex; flex-direction: column; }
+  header { background: var(--db-dark); color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  header .logo { width: 26px; height: 26px; background: var(--db-red);
+                 clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .tag { font-size: 12px; color: #9fb3bd; margin-left: 4px; }
+  .controls { background: var(--panel); border-bottom: 1px solid #e3e7ea; padding: 10px 20px;
+              display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .controls label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; }
+  .controls select { padding: 5px 8px; border: 1px solid #cdd5da; border-radius: 6px; font-size: 13px; min-width: 170px; }
+  .controls .session { font-size: 11px; color: var(--muted); margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .controls button { padding: 5px 12px; border: 1px solid var(--db-teal-dark); color: var(--db-teal-dark);
+                     background: #fff; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .controls button:hover { background: var(--user-bubble); }
+  #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 720px; padding: 12px 16px; border-radius: 12px; line-height: 1.5; white-space: pre-wrap; font-size: 14px; }
+  .msg.user { align-self: flex-end; background: var(--user-bubble); }
+  .msg.agent { align-self: flex-start; background: var(--agent-bubble); }
+  .msg .who { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .composer { display: flex; gap: 10px; padding: 14px 20px; background: var(--panel); border-top: 1px solid #e3e7ea; }
+  .composer textarea { flex: 1; resize: none; height: 46px; padding: 12px; border: 1px solid #cdd5da;
+                       border-radius: 8px; font-size: 14px; font-family: inherit; }
+  .composer button { padding: 0 22px; background: var(--db-teal); color: #fff; border: none;
+                     border-radius: 8px; font-weight: 600; cursor: pointer; }
+  .composer button:disabled { background: #9bc7b8; cursor: not-allowed; }
+  .dots span { display: inline-block; width: 6px; height: 6px; margin: 0 1px; background: var(--muted);
+               border-radius: 50%; animation: b 1.2s infinite; }
+  .dots span:nth-child(2){animation-delay:.2s} .dots span:nth-child(3){animation-delay:.4s}
+  @keyframes b { 0%,80%,100%{opacity:.3} 40%{opacity:1} }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo"></div>
+    <h1>TestForge</h1>
+    <span class="tag">Test Program Specification authoring · dual-memory agent on Databricks</span>
+  </header>
+
+  <div class="controls">
+    <label>Engineer (long-term: personal)
+      <select id="engineer">
+        <option value="amelia.cho">amelia.cho</option>
+        <option value="ravi.patel">ravi.patel</option>
+        <option value="sofia.reyes">sofia.reyes</option>
+      </select>
+    </label>
+    <label>Project (long-term: shared team)
+      <select id="project">
+        <option value="proj-pmic-buck-a">proj-pmic-buck-a</option>
+        <option value="proj-rf-frontend-x">proj-rf-frontend-x</option>
+        <option value="proj-mcu-m4">proj-mcu-m4</option>
+      </select>
+    </label>
+    <div class="session">
+      <span id="sessionLabel"></span>
+      <button id="newSession" title="Start a fresh thread (clears short-term memory only)">New session</button>
+    </div>
+  </div>
+
+  <div id="messages"></div>
+
+  <div class="composer">
+    <textarea id="input" placeholder="e.g. Help me set the IDDQ limit for PMIC-Buck-A. What have we decided before?"></textarea>
+    <button id="send">Send</button>
+  </div>
+
+<script>
+  let history = [];
+  let threadId = newThreadId();
+
+  function newThreadId() { return "sess-" + Math.random().toString(36).slice(2, 10); }
+  function el(id) { return document.getElementById(id); }
+  function updateSessionLabel() { el("sessionLabel").textContent = "session: " + threadId; }
+
+  function addMsg(role, text) {
+    const div = document.createElement("div");
+    div.className = "msg " + (role === "user" ? "user" : "agent");
+    const who = document.createElement("div");
+    who.className = "who";
+    who.textContent = role === "user" ? el("engineer").value : "TestForge";
+    const body = document.createElement("div");
+    body.textContent = text;
+    div.appendChild(who); div.appendChild(body);
+    el("messages").appendChild(div);
+    el("messages").scrollTop = el("messages").scrollHeight;
+    return body;
+  }
+
+  function startNewSession() {
+    history = [];
+    threadId = newThreadId();
+    el("messages").innerHTML = "";
+    updateSessionLabel();
+    addMsg("agent", "New session started. Short-term memory is cleared, but I still recall this project's team decisions and your personal preferences from long-term memory.");
+  }
+
+  el("newSession").onclick = startNewSession;
+  // Switching engineer or project starts a new session so the contrast is clean.
+  el("engineer").onchange = startNewSession;
+  el("project").onchange = startNewSession;
+
+  async function send() {
+    const text = el("input").value.trim();
+    if (!text) return;
+    el("input").value = "";
+    el("send").disabled = true;
+    addMsg("user", text);
+    history.push({ role: "user", content: text });
+
+    const thinking = addMsg("agent", "");
+    thinking.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+
+    try {
+      const res = await fetch("/invocations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: history,
+          thread_id: threadId,
+          user_id: el("engineer").value,
+          project_id: el("project").value,
+        }),
+      });
+      const data = await res.json();
+      const reply = data.output || ("Error: " + JSON.stringify(data));
+      thinking.textContent = reply;
+      history.push({ role: "assistant", content: reply });
+    } catch (e) {
+      thinking.textContent = "Request failed: " + e;
+    } finally {
+      el("send").disabled = false;
+      el("input").focus();
+    }
+  }
+
+  el("send").onclick = send;
+  el("input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  updateSessionLabel();
+</script>
+</body>
+</html>
