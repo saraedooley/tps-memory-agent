@@ -47,14 +47,14 @@ SYSTEM_PROMPT: |
 LLM_ENDPOINT_NAME: databricks-claude-sonnet-4-6
 
 # Unity Catalog coordinates for the data + UC Function tools.
-CATALOG_NAME: <CATALOG_NAME>          # e.g. tps_demo
+CATALOG_NAME: digital_twin_generic_catalog   # existing managed catalog in this workspace
 SCHEMA_NAME: tps
 TOOL1: recommend_test_limits
 TOOL2: yield_risk_by_block
 TOOL3: lookup_equipment_for_test
 
 # Lakebase Autoscaling (memory backend). Printed by setup/03_provision_lakebase.sh.
-LAKEBASE_AUTOSCALING_PROJECT: <LAKEBASE_PROJECT>   # e.g. tps-memory-agent
+LAKEBASE_AUTOSCALING_PROJECT: tps-memory-agent
 LAKEBASE_AUTOSCALING_BRANCH: production
 
 # Embedding model for long-term semantic recall. EMBEDDING_DIMS MUST match the

@@ -25,7 +25,7 @@ env:
       preferences with save_personal_memory. Be concise and engineering-precise,
       and say whether a recalled fact is a team decision or your preference.
   - name: CATALOG_NAME
-    value: "<CATALOG_NAME>"             # e.g. tps_demo
+    value: "digital_twin_generic_catalog"
   - name: SCHEMA_NAME
     value: "tps"
   - name: FUNCTION_1_NAME
@@ -35,12 +35,11 @@ env:
   - name: FUNCTION_3_NAME
     value: "lookup_equipment_for_test"
   - name: LAKEBASE_AUTOSCALING_PROJECT
-    value: "<LAKEBASE_PROJECT>"         # e.g. tps-memory-agent
+    value: "tps-memory-agent"
   - name: LAKEBASE_AUTOSCALING_BRANCH
     value: "production"
   - name: EMBEDDING_ENDPOINT
     value: "databricks-gte-large-en"
   - name: EMBEDDING_DIMS
     value: "1024"
-  - name: MLFLOW_EXPERIMENT_ID
-    valueFrom: app-experiment           # bound MLflow experiment resource
+  # MLflow tracing uses the app SP's default experiment; autolog is best-effort.

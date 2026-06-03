@@ -8,10 +8,24 @@
 bundle:
   name: tps-memory-agent
 
+# Keep the deployed app slim: ship only the runtime files (agent.py, server.py,
+# chat.html, requirements.txt, app.yaml, config/). Everything else is dev tooling.
+sync:
+  exclude:
+    - ".venv/**"
+    - "**/__pycache__/**"
+    - ".git/**"
+    - "docs/**"
+    - "setup/**"
+    - "eval/**"
+    - "scripts/**"
+    - "sql/**"
+    - ".databricks/**"
+
 variables:
   catalog_name:
     description: UC catalog holding the tps schema, data, and functions.
-    default: tps_demo
+    default: digital_twin_generic_catalog
   schema_name:
     default: tps
   lakebase_project:
@@ -31,57 +45,33 @@ targets:
       host: https://fevm-digital-twin-generic.cloud.databricks.com
 
 resources:
-  experiments:
-    app_experiment:
-      name: /Users/${workspace.current_user.userName}/tps-memory-agent
-
   apps:
     tps-memory-agent:
       name: tps-memory-agent
       description: Collaborative TPS authoring agent with short-term + long-term memory on Lakebase.
       source_code_path: .
-      config:
-        command: ["python", "server.py"]
-        env:
-          - name: CATALOG_NAME
-            value: ${var.catalog_name}
-          - name: SCHEMA_NAME
-            value: ${var.schema_name}
-          - name: FUNCTION_1_NAME
-            value: recommend_test_limits
-          - name: FUNCTION_2_NAME
-            value: yield_risk_by_block
-          - name: FUNCTION_3_NAME
-            value: lookup_equipment_for_test
-          - name: LAKEBASE_AUTOSCALING_PROJECT
-            value: ${var.lakebase_project}
-          - name: LAKEBASE_AUTOSCALING_BRANCH
-            value: ${var.lakebase_branch}
-          - name: EMBEDDING_ENDPOINT
-            value: databricks-gte-large-en
-          - name: EMBEDDING_DIMS
-            value: "1024"
+      # Runtime command + env come from the source app.yaml (kept in sync there).
       resources:
         - name: serving-endpoint
           serving_endpoint:
             name: ${var.serving_endpoint}
             permission: CAN_QUERY
-        - name: app-experiment
-          mlflow_experiment:
-            name: /Users/${workspace.current_user.userName}/tps-memory-agent
-            permission: CAN_EDIT
+        - name: embedding-endpoint
+          serving_endpoint:
+            name: databricks-gte-large-en
+            permission: CAN_QUERY
         - name: fn-recommend-test-limits
           uc_securable:
-            securable_type: function
+            securable_type: FUNCTION
             securable_full_name: ${var.catalog_name}.${var.schema_name}.recommend_test_limits
             permission: EXECUTE
         - name: fn-yield-risk-by-block
           uc_securable:
-            securable_type: function
+            securable_type: FUNCTION
             securable_full_name: ${var.catalog_name}.${var.schema_name}.yield_risk_by_block
             permission: EXECUTE
         - name: fn-lookup-equipment
           uc_securable:
-            securable_type: function
+            securable_type: FUNCTION
             securable_full_name: ${var.catalog_name}.${var.schema_name}.lookup_equipment_for_test
             permission: EXECUTE

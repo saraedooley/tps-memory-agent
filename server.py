@@ -82,7 +82,9 @@ async def memory(project_id: str = "default", user_id: str = "anonymous", query:
 def main() -> None:
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
+    # Databricks Apps injects the port via DATABRICKS_APP_PORT; default to 8000 locally.
+    port = int(os.getenv("DATABRICKS_APP_PORT", os.getenv("PORT", "8000")))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
