@@ -1,0 +1,36 @@
+flowchart LR
+    classDef userTurn fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,font-weight:bold
+    classDef saverNode fill:#FFF8E1,stroke:#F57F17,stroke-width:2px,color:#E65100,font-weight:bold
+    classDef noteNode fill:#FFFDE7,stroke:#F9A825,stroke-width:1px,color:#795548,font-style:italic
+    classDef decideNode fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px,color:#4A148C,font-weight:bold
+    classDef saveOpNode fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
+    classDef vectorNode fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C
+    classDef recallNode fill:#E8EAF6,stroke:#283593,stroke-width:2px,color:#1A237E,font-weight:bold
+    classDef sharedDB fill:#FCE4EC,stroke:#880E4F,stroke-width:3px,color:#880E4F,font-weight:bold
+
+    subgraph ST ["SHORT-TERM MEMORY  ·  one session / one thread_id"]
+        direction LR
+        T1["Turn 1<br/>user message"]:::userTurn
+        T2["Turn 2<br/>agent reply"]:::userTurn
+        T3["Turn 3<br/>user message"]:::userTurn
+        SAVER["AsyncCheckpointSaver<br/>writes full state<br/>per thread_id"]:::saverNode
+        SESSION_END["session ends —<br/>state expires"]:::noteNode
+        T1 --> T2 --> T3 --> SAVER --> SESSION_END
+    end
+
+    subgraph LT ["LONG-TERM MEMORY  ·  across sessions and engineers"]
+        direction LR
+        DECIDE["Agent decides<br/>fact is worth keeping"]:::decideNode
+        SAVE["save_team_memory<br/>or save_personal_memory"]:::saveOpNode
+        VECTORS["Embedded into<br/>store_vectors<br/>(pgvector)"]:::vectorNode
+        RECALL["recall_memory —<br/>semantic search"]:::recallNode
+        RESULT["Fact returned<br/>to a different session<br/>or a different engineer"]:::userTurn
+        DECIDE --> SAVE --> VECTORS
+        VECTORS -->|"<b>cross-session<br/>cross-engineer</b>"| RECALL
+        RECALL -->|"retrieved context"| RESULT
+    end
+
+    LAKEBASE["<b>Lakebase</b><br/>serverless Postgres + pgvector<br/>one instance · one governance plane"]:::sharedDB
+
+    SAVER -->|"checkpoint* tables"| LAKEBASE
+    VECTORS -->|"store / store_vectors"| LAKEBASE

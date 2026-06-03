@@ -1,0 +1,53 @@
+flowchart TD
+    classDef userNode fill:#DBEAFE,stroke:#1D4ED8,stroke-width:2px,color:#1E3A8A,font-weight:bold
+    classDef appNode fill:#EDE9FE,stroke:#5B21B6,stroke-width:2px,color:#3B0764,font-weight:bold
+    classDef agentNode fill:#F3E8FF,stroke:#7C3AED,stroke-width:2px,color:#4C1D95,font-weight:bold
+    classDef modelNode fill:#CCFBF1,stroke:#0D9488,stroke-width:2px,color:#134E4A,font-weight:bold
+    classDef toolNode fill:#DCFCE7,stroke:#16A34A,stroke-width:2px,color:#14532D
+    classDef deltaNode fill:#BBF7D0,stroke:#15803D,stroke-width:2px,color:#14532D,font-weight:bold
+    classDef stmemNode fill:#FEF9C3,stroke:#CA8A04,stroke-width:2px,color:#78350F,font-weight:bold
+    classDef ltmemNode fill:#FFEDD5,stroke:#EA580C,stroke-width:2px,color:#7C2D12,font-weight:bold
+    classDef lakebaseNode fill:#FCE7F3,stroke:#9D174D,stroke-width:3px,color:#831843,font-weight:bold
+    classDef mlflowNode fill:#F0FDF4,stroke:#86EFAC,stroke-width:1px,color:#166534,font-style:italic
+
+    ENG["Engineers<br/>(browser)"]:::userNode
+    APP["Databricks App<br/>FastAPI + Chat UI"]:::appNode
+
+    ENG -->|"HTTPS"| APP
+
+    subgraph UC ["Unity Catalog — one governance plane"]
+        direction TB
+
+        subgraph AGENT_WRAP ["MLflow Tracing"]
+            AGENT["LangGraph Agent"]:::agentNode
+        end
+
+        MODEL["Foundation Models API<br/>ChatDatabricks"]:::modelNode
+        AGENT <-->|"LLM calls"| MODEL
+
+        subgraph LAKEHOUSE ["Lakehouse Data"]
+            TOOLS["UC Function tools"]:::toolNode
+            DELTA["Delta Tables<br/>test limits · yield · equipment"]:::deltaNode
+            TOOLS --> DELTA
+        end
+
+        subgraph MEMSTORE ["Lakebase — serverless Postgres + pgvector"]
+            direction LR
+            LAKEBASE_ST["checkpoint* tables<br/>(short-term)"]:::lakebaseNode
+            LAKEBASE_LT["store / store_vectors<br/>(long-term · pgvector)"]:::lakebaseNode
+        end
+
+        STMEM["Short-term memory<br/>AsyncCheckpointSaver"]:::stmemNode
+        LTMEM["Long-term memory<br/>AsyncDatabricksStore<br/>(pgvector)"]:::ltmemNode
+
+        AGENT -->|"invoke tools"| TOOLS
+        AGENT <-->|"read/write checkpoint"| STMEM
+        AGENT <-->|"save/recall"| LTMEM
+
+        STMEM -->|"writes state"| LAKEBASE_ST
+        LTMEM -->|"upsert + embed"| LAKEBASE_LT
+
+        DELTA <-->|"sync"| LAKEBASE_ST
+    end
+
+    APP <-->|"REST/WebSocket"| AGENT

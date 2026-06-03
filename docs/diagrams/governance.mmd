@@ -1,0 +1,36 @@
+flowchart LR
+    classDef toolBox fill:#FEE2E2,stroke:#DC2626,stroke-width:2px,color:#7F1D1D,font-weight:bold
+    classDef badCaption fill:#FEF2F2,stroke:#EF4444,stroke-width:1px,color:#991B1B,font-style:italic
+    classDef goodCaption fill:#F0FDF4,stroke:#16A34A,stroke-width:1px,color:#14532D,font-style:italic
+    classDef innerGood fill:#DCFCE7,stroke:#16A34A,stroke-width:2px,color:#14532D,font-weight:bold
+    classDef divider fill:none,stroke:none,color:#555555,font-size:20px
+
+    subgraph LEFT ["STITCHED POINT TOOLS — N credentials · copies cross boundaries · larger attack surface"]
+        direction TB
+        VDB["Vector database<br/>separate security model"]:::toolBox
+        TPDB["Transactional Postgres<br/>separate security model"]:::toolBox
+        DWH["Data warehouse<br/>separate security model"]:::toolBox
+        MGW["Model gateway<br/>separate security model"]:::toolBox
+        APPH["App hosting<br/>separate security model"]:::toolBox
+        EVAL["Eval tool<br/>separate security model"]:::toolBox
+
+        VDB <-->|"data copy"| TPDB
+        TPDB <-->|"data copy"| DWH
+        DWH <-->|"data copy"| MGW
+        MGW <-->|"data copy"| APPH
+        APPH <-->|"data copy"| EVAL
+        EVAL <-->|"data copy"| VDB
+    end
+
+    subgraph RIGHT ["ONE GOVERNED PLATFORM — one credential model · no data movement · one lineage graph"]
+        direction TB
+        subgraph GOV ["one governance plane — one credential model"]
+            direction TB
+            MEM["memory"]:::innerGood
+            DAT["data"]:::innerGood
+            TOL["tools"]:::innerGood
+            MOD["model"]:::innerGood
+            OBS["observability"]:::innerGood
+            MEM --- DAT --- TOL --- MOD --- OBS
+        end
+    end
