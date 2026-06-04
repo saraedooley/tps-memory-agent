@@ -1,14 +1,52 @@
-# Databricks Apps runtime dependencies (flat pip list), trimmed to exactly what
-# the app imports so pip resolves fast (no backtracking). databricks-langchain
-# brings langchain-core + a compatible langgraph/psycopg; we don't import the
-# heavyweight `langchain`/`langchain-community` meta-packages directly.
+# Databricks Apps runtime dependencies (CPython 3.11).
 #
-# Keep the [memory] extra: it provides AsyncDatabricksStore / AsyncCheckpointSaver.
-databricks-langchain[memory]==0.19.0
-unitycatalog-ai[databricks]==0.4.0
-unitycatalog-langchain[databricks]==0.4.0
-mlflow-skinny[databricks]==3.13.0
-langgraph==1.0.5
+# The app imports, all from `databricks_langchain`: ChatDatabricks,
+# DatabricksEmbeddings, UCFunctionToolkit, AsyncDatabricksStore,
+# AsyncCheckpointSaver (the `[memory]` extra is REQUIRED for the async store +
+# checkpointer) -- plus langgraph, langchain-core, mlflow tracing, fastapi/uvicorn.
+#
+# Why these exact pins: an unpinned LangChain stack sent the Apps pip build into
+# `resolution-too-deep` -- pip explored 60+ `langsmith` candidates (dragged in by
+# `langchain-community`) and 40+ `langchain-core` versions before timing out after
+# ~47 min. The pins below come from databricks/databricks-ai-bridge's own
+# `uv.lock` at the `databricks-langchain-v0.17.0` tag, a known-consistent
+# resolution, so pip does ZERO backtracking on the LangChain stack.
+#
+# Only PURE-PYTHON packages are pinned (version-agnostic across CPython builds).
+# Native / py-version-specific deps (databricks-connect, grpcio, pyarrow,
+# pydantic-core, psycopg-binary, numpy, sqlalchemy, starlette, ...) and tightly
+# version-coupled ones (databricks-sdk <-> databricks-connect, pydantic) are left
+# unpinned on purpose so pip selects cp311 wheels and mutually compatible versions.
+
+databricks-langchain[memory]==0.17.0
+databricks-ai-bridge[memory]==0.17.0
+unitycatalog-langchain[databricks]==0.3.0
+unitycatalog-ai[databricks]==0.3.2
+
+# LangChain stack -- pinned to stop pip's resolution-too-deep backtracking.
+langchain==1.2.12
+langchain-core==1.2.20
+langchain-classic==1.0.3
+langchain-community==0.4.1
+langchain-text-splitters==1.1.1
+langsmith==0.7.20
+
+# LangGraph family -- consistent with langchain-core 1.2.20 (checkpoint-postgres
+# is pulled by the [memory] extra and left unpinned to match the resolved checkpoint).
+langgraph==1.1.3
+langgraph-checkpoint==4.0.1
+langgraph-prebuilt==1.0.8
+langgraph-sdk==0.3.12
+
+# Databricks + model client stack (pure-python).
+mlflow==3.8.1
+mlflow-skinny==3.8.1
+openai==2.29.0
+databricks-openai==0.12.1
+databricks-vectorsearch==0.66
+databricks-mcp==0.9.0
+langchain-mcp-adapters==0.2.2
+
+# Web server (app's own; stable, cp311 wheels).
 fastapi==0.115.6
 uvicorn==0.34.0
-pydantic==2.10.4
