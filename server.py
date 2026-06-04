@@ -80,12 +80,16 @@ async def memory(project_id: str = "default", user_id: str = "anonymous", query:
     from databricks_langchain import AsyncDatabricksStore
 
     q = query or "project decisions, limits, equipment standards, preferences"
+    # Normalize ids to the same namespace labels the agent writes under
+    # (store labels can't contain '.'), so inspection matches stored data.
+    team_ns = ("project", agent_mod._safe_label(project_id))
+    user_ns = ("user", agent_mod._safe_label(user_id))
     out: dict[str, list[dict[str, str]]] = {"team": [], "personal": []}
     async with AsyncDatabricksStore(**agent_mod._get_store_kwargs()) as store:
         await store.setup()
-        for item in await store.asearch(("project", project_id), query=q, limit=50):
+        for item in await store.asearch(team_ns, query=q, limit=50):
             out["team"].append({"key": item.key, "value": item.value.get("content", "")})
-        for item in await store.asearch(("user", user_id), query=q, limit=50):
+        for item in await store.asearch(user_ns, query=q, limit=50):
             out["personal"].append({"key": item.key, "value": item.value.get("content", "")})
     return JSONResponse(out)
 

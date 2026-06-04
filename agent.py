@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import uuid
 from typing import Annotated, Any, Optional, Sequence, TypedDict
 
@@ -150,12 +151,24 @@ def _get_store_kwargs() -> dict[str, Any]:
 # annotated with InjectedStore. user_id and project_id arrive on the runtime
 # config and scope the namespaces.
 # --------------------------------------------------------------------------- #
+def _safe_label(value: str) -> str:
+    """Normalize an id into a valid LangGraph store namespace label.
+
+    Store namespace labels cannot contain periods (the '.' is reserved), so
+    dotted engineer/project ids like 'sofia.reyes' must be normalized. We map
+    any char outside [A-Za-z0-9_-] to '_' so the UI can keep human-readable ids
+    while the store stays happy. Saves and searches both go through here, so the
+    mapping is consistent.
+    """
+    return re.sub(r"[^A-Za-z0-9_-]", "_", value or "") or "default"
+
+
 def _ns_team(config: RunnableConfig) -> tuple[str, str]:
-    return ("project", config["configurable"].get("project_id", "default"))
+    return ("project", _safe_label(config["configurable"].get("project_id", "default")))
 
 
 def _ns_personal(config: RunnableConfig) -> tuple[str, str]:
-    return ("user", config["configurable"].get("user_id", "anonymous"))
+    return ("user", _safe_label(config["configurable"].get("user_id", "anonymous")))
 
 
 @tool
