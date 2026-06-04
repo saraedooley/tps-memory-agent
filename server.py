@@ -16,6 +16,7 @@ Target workspace: fevm-digital-twin-generic.cloud.databricks.com (org 7474657725
 
 from __future__ import annotations
 
+import logging
 import os
 import pathlib
 from typing import Any, Optional
@@ -49,13 +50,23 @@ async def healthz() -> dict[str, str]:
 
 
 @app.post("/invocations")
-async def invocations(req: ChatRequest) -> dict[str, Any]:
-    return await run_agent(
-        input_messages=req.input,
-        thread_id=req.thread_id,
-        user_id=req.user_id,
-        project_id=req.project_id,
-    )
+async def invocations(req: ChatRequest):
+    # Always return JSON -- even on failure -- so the chat UI (which calls
+    # res.json()) shows a clean error instead of choking on FastAPI's
+    # plain-text "Internal Server Error" body ("Unexpected token 'I'...").
+    try:
+        return await run_agent(
+            input_messages=req.input,
+            thread_id=req.thread_id,
+            user_id=req.user_id,
+            project_id=req.project_id,
+        )
+    except Exception as exc:  # noqa: BLE001 -- surface the reason to the client
+        logging.getLogger("tps_server").exception("invocation failed")
+        return JSONResponse(
+            status_code=500,
+            content={"output": None, "thread_id": req.thread_id, "error": str(exc)},
+        )
 
 
 @app.get("/memory")

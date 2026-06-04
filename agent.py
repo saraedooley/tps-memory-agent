@@ -329,5 +329,14 @@ async def run_agent(
             "project_id": project_id or "default",
         }
     }
-    output = await _run_async(input_messages, config)
+
+    # With the Lakebase checkpointer active, prior turns of this thread are
+    # restored from short-term memory by thread_id. So we send ONLY the newest
+    # user turn -- re-sending the client's full flat history would (a) duplicate
+    # messages via the add_messages reducer and (b) break Anthropic's
+    # tool_use/tool_result pairing (400 BadRequest) on any thread whose earlier
+    # turn called a UC tool. The client may still POST the whole history; we
+    # intentionally use only the last message.
+    new_turn = input_messages[-1:] if input_messages else input_messages
+    output = await _run_async(new_turn, config)
     return {"output": output, "thread_id": thread_id}
